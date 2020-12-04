@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+
+        <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.19.0.min.js"></script>
+        <link rel="stylesheet" href="map.css">
+        <link rel="shortcut icon" href="images/FM_logo_top.png">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+        <title>Trackimals</title>
+        <link rel="icon" type="image/x-icon" href="assets/img/favicon.ico" />
+        <!-- Font Awesome icons (free version)-->
+        <script src="https://use.fontawesome.com/releases/v5.15.1/js/all.js" crossorigin="anonymous"></script>
+        <!-- Google fonts-->
+        <link href="https://fonts.googleapis.com/css?family=Varela+Round" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet" />
+        <!-- Core theme CSS (includes Bootstrap)-->
+        <link href="css/styles.css" rel="stylesheet" />
+
+    </head>
+    <body id="page-top">
+        <!-- Navigation-->
+        <nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+            <div class="container">
+                <a class="navbar-brand js-scroll-trigger" href="#page-top">Trackimals</a>
+                <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+                    Menu
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarResponsive">
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item"><a class="nav-link js-scroll-trigger" href="index.html">About</a></li>
+                        <li class="nav-item"><a class="nav-link js-scroll-trigger" href="index.html">Projects</a></li>
+                        <li class="nav-item"><a class="nav-link js-scroll-trigger" href="live-tracking.html">Live Tracking</a></li>
+                        <li class="nav-item"><a class="nav-link js-scroll-trigger" href="index.html">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        
+        <header class="masthead">
+            <div class="container d-flex h-100 align-items-center">
+                <div class="mx-auto text-center">
+                    <div class="bg"></div>
+                    <div class="bg-others"> 
+                    <div class="container">
+                      <h1 ></h1>
+                        <center><hr style="height:2px; border:none; color:#ffffff; background-color:#ffffff; width:35%; margin: 0 auto 0 auto;"></center>
+                        <p>Livestock Realtime GPS Monitoring</p>  
+                        <center><button class="btn btn-success col-sm-3" id="action">Start Tracking</button></center><br>
+                        <center><div id="map-canvas"></div></center>
+                    </div>
+                          </div>
+
+                    <script>
+                    window.lat = 53.396834;
+                    window.lng = -10.023912;
+
+                    var map;
+                    var mark;
+                    var lineCoords = [];
+                      
+                    var initialize = function() {
+                      map  = new google.maps.Map(document.getElementById('map-canvas'), {center:{lat:lat,lng:lng},zoom:12});
+                      mark = new google.maps.Marker({position:{lat:lat, lng:lng}, map:map});
+                    };
+
+                    window.initialize = initialize;
+
+                    var redraw = function(payload) {
+                      if(payload.message.lat){
+                      lat = payload.message.lat;
+                      lng = payload.message.lng;
+
+                      map.setCenter({lat:lat, lng:lng, alt:0});
+                      mark.setPosition({lat:lat, lng:lng, alt:0});
+                      
+                      lineCoords.push(new google.maps.LatLng(lat, lng));
+
+                      var lineCoordinatesPath = new google.maps.Polyline({
+                        path: lineCoords,
+                        geodesic: true,
+                        strokeColor: '#2E10FF'
+                      });
+                      
+                      lineCoordinatesPath.setMap(map);}
+                    };
+
+                    var pnChannel = "raspi-tracker";
+
+                    var pubnub = new PubNub({
+                      publishKey:   'pub-c-4d5e3927-2bda-4bed-bd69-eb71135ac773',
+                      subscribeKey: 'sub-c-f51bfe74-2271-11eb-bca3-12c13681665f'
+                    });
+                        
+                    document.querySelector('#action').addEventListener('click', function(){
+                        var text = document.getElementById("action").textContent;
+                        if(text == "Start Tracking"){
+                            pubnub.subscribe({channels: [pnChannel]});
+                            pubnub.addListener({message:redraw});
+                            document.getElementById("action").classList.add('btn-danger');
+                            document.getElementById("action").classList.remove('btn-success');
+                            document.getElementById("action").textContent = 'Stop Tracking';
+                        }
+                        else{
+                            pubnub.unsubscribe( {channels: [pnChannel] });
+                            document.getElementById("action").classList.remove('btn-danger');
+                            document.getElementById("action").classList.add('btn-success');
+                            document.getElementById("action").textContent = 'Start Tracking';
+                        }
+                        });
+                    </script>
+                    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&key=AIzaSyAquWaKitqk7kYYb7OOGoNaEu4cgUOp71k&callback=initialize"></script>
+
+                    <script>
+                        function newPoint(time) {
+                        var radius = 0.001;
+                        var x = Math.random() * radius;
+                        var y = Math.random() * radius;
+                        return {lat:window.lat + y, lng:window.lng + x};
+                          }
+                        setInterval(function() {
+                        pubnub.publish({channel:pnChannel, message:newPoint()});
+                        }, 500);
+                    </script>
+                </div>
+            </div>
+        </header>
+
+
+        <!-- Footer-->
+        <footer class="footer bg-black small text-center text-white-50"><div class="container">Copyright © Your Website 2020</div></footer>
+        <!-- Bootstrap core JS-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Third party plugin JS-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+        <!-- Core theme JS-->
+        <script src="js/scripts.js"></script>
+    </body>
+</html>
